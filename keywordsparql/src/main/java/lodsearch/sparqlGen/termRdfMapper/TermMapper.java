@@ -9,6 +9,7 @@ import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.RDFNode;
 
+import lodsearch.sparqlGen.constants.GlobalConstants;
 import lodsearch.sparqlGen.queryRes.QueryResult;
 import lodsearch.spotlightner.SpotlightClient;
 import lodsearch.utils.GeneralUtils;
@@ -106,8 +107,8 @@ public class TermMapper {
 						+ term + "\" . \n" + "FILTER (lang(?lbl) = 'en') . \n" + "}\n" + "} limit 3";
 
 				  
-				QueryExecution queryRes = QueryExecutionFactory.sparqlService("http://lod.openlinksw.com/sparql/",
-						queryPart1, "http://dbpedia.org");
+				QueryExecution queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
+						queryPart1, GlobalConstants.DBPEDIA_GRAPH_IRI);
 				ResultSet res = queryRes.execSelect();
 				res.getResultVars();
 				while (res.hasNext()) {
@@ -121,8 +122,8 @@ public class TermMapper {
 					qRes.setMappingURI(snode.asNode().getURI());
 					queryMappings.add(qRes);
 				}
-				queryRes = QueryExecutionFactory.sparqlService("http://lod.openlinksw.com/sparql/", queryPart2,
-						"http://dbpedia.org");
+				queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT, queryPart2,
+						GlobalConstants.DBPEDIA_GRAPH_IRI);
 				res = queryRes.execSelect();
 				res.getResultVars();
 				while (res.hasNext()) {
@@ -137,8 +138,8 @@ public class TermMapper {
 					queryMappings.add(qRes);
 				}
 
-				queryRes = QueryExecutionFactory.sparqlService("http://lod.openlinksw.com/sparql/", queryPart3,
-						"http://dbpedia.org");
+				queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT, queryPart3,
+						GlobalConstants.DBPEDIA_GRAPH_IRI);
 				res = queryRes.execSelect();
 				res.getResultVars();
 				while (res.hasNext()) {

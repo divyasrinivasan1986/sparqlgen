@@ -10,6 +10,7 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.RDFNode;
 
 import lodsearch.sparqlGen.queryRes.QueryResult;
+import lodsearch.sparqlGen.subgraph.Subgraph;
 import lodsearch.sparqlGen.termRdfMapper.TermMapper;
 import lodsearch.spotlightner.SpotlightClient;
 import lodsearch.utils.GeneralUtils;
@@ -26,6 +27,7 @@ public class SparqlRunner {
 		String noStopWordsQuery = GeneralUtils.removeStopWords(query);
 		queryKeywordVecsMap = GeneralUtils.removeStopWordEntriesFromMap(noStopWordsQuery, keywordVecs);
 		termToRdfMapping = TermMapper.obtainRdfMappings(query,queryKeywordVecsMap);
+		Subgraph.formSubgraphs(termToRdfMapping);
 	}
 
 	public static void main(String[] args) {
