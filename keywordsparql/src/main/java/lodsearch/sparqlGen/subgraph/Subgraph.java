@@ -1,10 +1,8 @@
 package lodsearch.sparqlGen.subgraph;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.query.QueryExecution;
@@ -17,63 +15,82 @@ import lodsearch.sparqlGen.constants.GlobalConstants;
 import lodsearch.sparqlGen.queryRes.QueryResult;
 
 public class Subgraph {
-	
+	private static SelectBuilder subgraph = new SelectBuilder();
+	private static List<SelectBuilder> spanningSubgraphs = new ArrayList<SelectBuilder>();
+	static {
+		subgraph.addPrefixes(GlobalConstants.prefixes);
+	}
 	public static void formSubgraphs(LinkedHashMap<String, List<QueryResult>> termToRdfMapping) {
 		List<String> queryTerms = new ArrayList<String>(termToRdfMapping.keySet());
-		SelectBuilder subgraph = new SelectBuilder();
+		List<SelectBuilder> subgraphsList = new ArrayList<SelectBuilder>();
 		for (int i = 0; i < queryTerms.size()-1; i++) {
 			List<QueryResult> firstTermUris = termToRdfMapping.get(queryTerms.get(i));
 			List<QueryResult> secondTermUris = termToRdfMapping.get(queryTerms.get(i+1));
+			List<SelectBuilder> newSubgraphsList = new ArrayList<SelectBuilder>();
 			for(QueryResult firsttermUri : firstTermUris) {
 				for(QueryResult secondTermUri : secondTermUris) {
-					subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri);
+					if(!subgraphsList.isEmpty()) {
+						for(SelectBuilder sb:subgraphsList) {
+							SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,i,sb);
+							newSubgraphsList.add(subgraph);
+						}
+					}
+					else {
+						SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,i,new SelectBuilder());
+						subgraphsList.add(subgraph);
+					}
+					
 				}
 			}
-
+			if(!newSubgraphsList.isEmpty())
+				subgraphsList = newSubgraphsList;
 		}
+		spanningSubgraphs = subgraphsList;
 		//subgraph will be spanning subgraph here
-		QueryExecution queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
-				subgraph.buildString(), GlobalConstants.DBPEDIA_GRAPH_IRI);
-		ResultSet res1 = queryRes.execSelect();
-		while (res1.hasNext()) {
-			QuerySolution nextSolution = res1.nextSolution();
+		for(SelectBuilder sb:spanningSubgraphs) {
+			QueryExecution queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
+					subgraph.buildString(), GlobalConstants.DBPEDIA_GRAPH_IRI);
+			ResultSet res1 = queryRes.execSelect();
+			while (res1.hasNext()) {
+				QuerySolution nextSolution = res1.nextSolution();
+			}
 		}
+		
 	}
-	private static SelectBuilder checkUriTypeAndFormSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
-		String subgraph = null;
+	private static SelectBuilder checkUriTypeAndFormSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder sb2) {
 		SelectBuilder sb = new SelectBuilder();
 		//need a mechanism to backtrack if results not found
 		if(firsttermUri.getType().contains("resource") && secondTermUri.getType().contains("resource")) {
-			sb = formResResSubgraph(firsttermUri,secondTermUri);
+			sb = formResResSubgraph(firsttermUri,secondTermUri,index);
 		}
 		else if(firsttermUri.getType().contains("ontology") && secondTermUri.getType().contains("ontology")) {
-			sb = formOntOntSubgraph(firsttermUri,secondTermUri);
+			sb = formOntOntSubgraph(firsttermUri,secondTermUri,index);
 		}
 		else if(firsttermUri.getType().contains("property") && secondTermUri.getType().contains("property")) {
-			sb = formPropPropSubgraph(firsttermUri,secondTermUri);
+			sb = formPropPropSubgraph(firsttermUri,secondTermUri,index);
 		}
 		else if((firsttermUri.getType().contains("resource") && secondTermUri.getType().contains("ontology")) ) {
-			sb = formResOntSubgraph(firsttermUri,secondTermUri);
+			sb = formResOntSubgraph(firsttermUri,secondTermUri,index);
 		}
 		else if((firsttermUri.getType().contains("ontology") && secondTermUri.getType().contains("resource"))) {
-			sb = formResOntSubgraph(secondTermUri,firsttermUri);
+			sb = formResOntSubgraph(secondTermUri,firsttermUri,index);
 		}
 		else if((firsttermUri.getType().contains("resource") && secondTermUri.getType().contains("property"))) {
-			sb = formResPropSubgraph(firsttermUri,secondTermUri);
+			sb = formResPropSubgraph(firsttermUri,secondTermUri,index);
 		}
 		else if((firsttermUri.getType().contains("property") && secondTermUri.getType().contains("resource"))) {
-			sb = formResPropSubgraph(secondTermUri,firsttermUri);
+			sb = formResPropSubgraph(secondTermUri,firsttermUri,index);
 		}
 		else if((firsttermUri.getType().contains("ontology") && secondTermUri.getType().contains("property"))) {
-			sb = formOntPropSubgraph(firsttermUri,secondTermUri);
+			sb = formOntPropSubgraph(firsttermUri,secondTermUri,index);
 		}
 		else if((firsttermUri.getType().contains("property") && secondTermUri.getType().contains("ontology"))) {
-			sb = formOntPropSubgraph(secondTermUri,firsttermUri);
+			sb = formOntPropSubgraph(secondTermUri,firsttermUri,index);
 		}
 		
 		return sb;
 	}
-	private static SelectBuilder formOntPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
+	private static SelectBuilder formOntPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index) {
 		SelectBuilder sb1 = new SelectBuilder();
 		SelectBuilder sb2 = new SelectBuilder();
 		SelectBuilder finalBuilder = new SelectBuilder();
@@ -124,7 +141,7 @@ public class Subgraph {
 		return finalBuilder;
 
 	}
-	private static SelectBuilder formResPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
+	private static SelectBuilder formResPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index) {
 		SelectBuilder sb1 = new SelectBuilder();
 		SelectBuilder sb2 = new SelectBuilder();
 		SelectBuilder finalBuilder = new SelectBuilder();
@@ -169,7 +186,7 @@ public class Subgraph {
 		}
 		
 	}
-	private static SelectBuilder formResOntSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
+	private static SelectBuilder formResOntSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index) {
 		SelectBuilder sb1 = new SelectBuilder();
 		SelectBuilder sb2 = new SelectBuilder();
 		SelectBuilder sb3 = new SelectBuilder();
@@ -234,11 +251,11 @@ public class Subgraph {
 		return finalBuilder;
 
 	}
-	private static SelectBuilder formPropPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
+	private static SelectBuilder formPropPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index) {
 		SelectBuilder finalBuilder = new SelectBuilder();
 		return finalBuilder;
 	}
-	private static SelectBuilder formOntOntSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
+	private static SelectBuilder formOntOntSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index) {
 		SelectBuilder sb1 = new SelectBuilder();
 		SelectBuilder sb2 = new SelectBuilder();
 		SelectBuilder finalBuilder = new SelectBuilder();
@@ -288,7 +305,7 @@ public class Subgraph {
 		}
 	
 	}
-	private static SelectBuilder formResResSubgraph(QueryResult firsttermUri, QueryResult secondTermUri) {
+	private static SelectBuilder formResResSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index) {
 		SelectBuilder sb1 = new SelectBuilder();
 		SelectBuilder sb2 = new SelectBuilder();
 		SelectBuilder finalBuilder = new SelectBuilder();
