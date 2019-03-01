@@ -15,12 +15,10 @@ import lodsearch.sparqlGen.constants.GlobalConstants;
 import lodsearch.sparqlGen.queryRes.QueryResult;
 
 public class Subgraph {
-	private static SelectBuilder subgraph = new SelectBuilder();
 	private static List<SelectBuilder> spanningSubgraphs = new ArrayList<SelectBuilder>();
-	static {
-		subgraph.addPrefixes(GlobalConstants.prefixes);
-	}
+	
 	public static void formSubgraphs(LinkedHashMap<String, List<QueryResult>> termToRdfMapping) {
+		
 		List<String> queryTerms = new ArrayList<String>(termToRdfMapping.keySet());
 		List<SelectBuilder> subgraphsList = new ArrayList<SelectBuilder>();
 		for (int i = 0; i < queryTerms.size()-1; i++) {
@@ -38,6 +36,7 @@ public class Subgraph {
 					}
 					else {
 						SelectBuilder subgraphParam = new SelectBuilder();
+						subgraphParam.addPrefixes(GlobalConstants.prefixes);
 						SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,i,subgraphParam);
 						if(!(subgraph == subgraphParam))
 							subgraphsList.add(subgraph);
@@ -99,12 +98,12 @@ public class Subgraph {
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
 			sb1.addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
-			sb1.addWhere("?res"+index, "<"+secondTermUri.getMappingURI()+">","?res"+(index+1) );
+			sb1.addWhere("?res"+index, "<"+secondTermUri.getMappingURI()+">","?res"+(index + "a") );
 			sb1.addVar("count(*)", "?c"+index);
 			
 			sb2.addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
-			sb2.addWhere("?res"+(index+1), "<"+secondTermUri.getMappingURI()+">","?res"+index );
-			sb2.addVar("count(*)", "?c"+(index+1));
+			sb2.addWhere("?res"+(index + "a"), "<"+secondTermUri.getMappingURI()+">","?res"+index );
+			sb2.addVar("count(*)", "?c"+(index + "a"));
 		
 
 		} catch (ParseException e) {
@@ -121,7 +120,7 @@ public class Subgraph {
 		ResultSet res2 = queryRes.execSelect();
 		
 	
-		int count2 = res2.nextSolution().get("c"+(index+1)).asLiteral().getInt();
+		int count2 = res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt();
 		//compare res1 res2 results. keep higher one
 		int count1 = res1.nextSolution().get("c"+index).asLiteral().getInt();
 		if(count1 > count2) {
@@ -134,10 +133,10 @@ public class Subgraph {
 			return subgraph;
 		}
 		else {
-			finalBuilder.addVar("?res"+index).addVar("?res"+(index+1));
-			/*finalBuilder.addVar("?lbl"+index).addVar("?lbl"+(index+1));
+			finalBuilder.addVar("?res"+index)/*.addVar("?res"+(index + "a"))*/;
+			/*finalBuilder.addVar("?lbl"+index).addVar("?lbl"+(index + "a"));
 			finalBuilder.addWhere("?res"+index,"rdfs:label","?lbl"+index);
-			finalBuilder.addWhere("?res"+(index+1),"rdfs:label","?lbl"+(index+1));*/
+			finalBuilder.addWhere("?res"+(index + "a"),"rdfs:label","?lbl"+(index + "a"));*/
 		}
 		
 		return finalBuilder;
@@ -149,7 +148,7 @@ public class Subgraph {
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
 			sb1.addVar("count(*)", "?p"+index).addVar("?res"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "<"+secondTermUri.getMappingURI()+">","?res"+index );
-			sb2.addVar("count(*)", "?p"+(index+1)).addVar("?res"+index).addWhere("?res"+index, "<"+secondTermUri.getMappingURI()+">","<"+firsttermUri.getMappingURI()+">");
+			sb2.addVar("count(*)", "?p"+(index + "a")).addVar("?res"+index).addWhere("?res"+index, "<"+secondTermUri.getMappingURI()+">","<"+firsttermUri.getMappingURI()+">");
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -166,7 +165,7 @@ public class Subgraph {
 		
 		//compare res1 res2 results. keep higher one
 		int count1 = res1.nextSolution().get("p"+index).asLiteral().getInt();
-		int count2 = res2.nextSolution().get("p"+(index+1)).asLiteral().getInt();
+		int count2 = res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt();
 		if(count1 > count2) {
 			finalBuilder = sb1;
 		}
@@ -196,11 +195,11 @@ public class Subgraph {
 			
 			sb2.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+secondTermUri.getMappingURI()+">");
 			sb2.addWhere("?res"+index, "?p", "<"+firsttermUri.getMappingURI()+">");
-			sb2.addVar("count(*)", "?c"+(index+1));
+			sb2.addVar("count(*)", "?c"+(index + "a"));
 			
 			sb3.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+secondTermUri.getMappingURI()+">");
 			sb3.addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "?res"+index);
-			sb3.addVar("count(*)", "?c"+(index+1)+"a");
+			sb3.addVar("count(*)", "?c"+(index + "a")+"a");
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -225,8 +224,8 @@ public class Subgraph {
 			queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
 					sb3.buildString(), GlobalConstants.DBPEDIA_GRAPH_IRI);
 			ResultSet res3 = queryRes.execSelect();
-			count2 = res2.nextSolution().get("c"+(index+1)).asLiteral().getInt();
-			count3 = res3.nextSolution().get("c"+(index+1)+"a").asLiteral().getInt();
+			count2 = res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt();
+			count3 = res3.nextSolution().get("c"+(index + "a")+"a").asLiteral().getInt();
 			if(count1==0 && count2==0 && count3==0) {
 				return subgraph;
 			}
@@ -255,15 +254,13 @@ public class Subgraph {
 		SelectBuilder sb2 = subgraph;
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
-			sb1.addPrefixes(GlobalConstants.prefixes);
 			sb1.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
-			sb1.addVar("?res"+(index+1)).addWhere("?res"+(index+1), "rdf:type", "<"+secondTermUri.getMappingURI()+">");
+			sb1./*addVar("?res"+(index + "a")).*/addWhere("?res"+(index + "a"), "rdf:type", "<"+secondTermUri.getMappingURI()+">");
 			sb1.addVar("count(*)", "?p"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "<"+secondTermUri.getMappingURI()+">");
 
-			sb2.addPrefixes(GlobalConstants.prefixes);
 			sb2.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
-			sb2.addVar("?res"+(index+1)).addWhere("?res"+(index+1), "rdf:type", "<"+secondTermUri.getMappingURI()+">");
-			sb2.addVar("count(*)", "?p"+(index+1)).addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">");
+			sb2/*.addVar("?res"+(index + "a"))*/.addWhere("?res"+(index + "a"), "rdf:type", "<"+secondTermUri.getMappingURI()+">");
+			sb2.addVar("count(*)", "?p"+(index + "a")).addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">");
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -280,7 +277,7 @@ public class Subgraph {
 		
 		//compare res1 res2 results. keep higher one
 		int count1 = res1.nextSolution().get("p"+index).asLiteral().getInt();
-		int count2 = res2.nextSolution().get("p"+(index+1)).asLiteral().getInt();
+		int count2 = res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt();
 		if(count1 > count2) {
 			
 			finalBuilder = sb1;
@@ -306,7 +303,7 @@ public class Subgraph {
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
 			sb1.addVar("?p"+index).addVar("count(*)", "?p"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "<"+secondTermUri.getMappingURI()+">");
-			sb2.addVar("?p"+(index+1)).addVar("count(*)", "?p"+(index+1)).addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">");
+			sb2.addVar("?p"+(index + "a")).addVar("count(*)", "?p"+(index + "a")).addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">");
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -323,7 +320,7 @@ public class Subgraph {
 		
 		//compare res1 res2 results. keep higher one
 		int count1 = res1.nextSolution().get("p"+index).asLiteral().getInt();
-		int count2 = res2.nextSolution().get("p"+(index+1)).asLiteral().getInt();
+		int count2 = res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt();
 		if(count1 > count2) {
 			
 			finalBuilder = sb1;
