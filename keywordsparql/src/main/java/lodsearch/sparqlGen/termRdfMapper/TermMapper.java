@@ -67,11 +67,14 @@ public class TermMapper {
 				continue;
 			}else {
 				for (String word : keywordVecs.get(queryTerms.get(i - 1))) {
-					List<QueryResult> queryMappings = fetchTermMappings(word);
-					Set<String> mappingUriSet = new HashSet<String>();
-					List<QueryResult> noDuplicateMappings = queryMappings.stream().filter(e -> mappingUriSet.add(e.getMappingURI()))
-				            .collect(Collectors.toList());
-					queryTermMappings.addAll(noDuplicateMappings);
+					if(word != null) {
+						List<QueryResult> queryMappings = fetchTermMappings(word);
+						Set<String> mappingUriSet = new HashSet<String>();
+						List<QueryResult> noDuplicateMappings = queryMappings.stream().filter(e -> mappingUriSet.add(e.getMappingURI()))
+					            .collect(Collectors.toList());
+						queryTermMappings.addAll(noDuplicateMappings);
+					}
+					
 				}
 				
 				termToRdfMapping.put(queryTerms.get(i - 1), queryTermMappings);
@@ -88,29 +91,47 @@ public class TermMapper {
 		String queryPart1 = null;
 		String queryPart2 = null;
 		String queryPart3 = null;
+	/*	String[] naiveTermSplit = naiveTermSplitter(term);
+		String queryTerm = null;
+		if(naiveTermSplit!=null) {
+			queryTerm = naiveTermSplit[0] + "' and '" + naiveTermSplit[1];
+		}else {
+			queryTerm = term;
+		}*/
 		try {
 				/**
 				 * here do separate small queries for res,ont and prop. append to the list
 				 */
-
+			
 				queryPart1 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n"
 						+ "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n" + "PREFIX bif:<bif:> \n"
-						+ "select ?s ?t where {\n" + "{ \n" + "?s rdf:type ?t . \n" + "?s rdfs:label ?lbl .\n"
-						+ "?lbl bif:contains " + "\"" + term + "\" .\n" + "FILTER (lang(?lbl) = 'en') . \n" + "}\n"
-						+ "}ORDER BY strlen(str(?s)) limit 4";
+						+ "select ?s ?t "
+						+ "where {\n" + "{ \n" + "?s rdf:type ?t . \n" + "?s rdfs:label ?lbl .\n"
+						+ "?lbl bif:contains " + "\"" + term + "\" .\n" 
+//						+ "FILTER (CONTAINS(?lbl, \""+ term + "\")) .\n"
+						+ "filter not exists{ \n"
+						+ "?s rdf:type rdf:Property . \n"
+						+ "?s rdf:type <http://www.w3.org/2002/07/owl#Class> }" 
+						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n"
+						+ "} ORDER BY strlen(str(?s)) limit 10";
 				queryPart2 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n"
 						+ "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n" + "PREFIX bif:<bif:> \n"
-						+ "select ?s ?t ?lbl where {\n" + "{ \n" + "?s rdf:type ?t . \n"
+						+ "select ?s ?t ?lbl "
+						+ "where {\n" + "{ \n" + "?s rdf:type ?t . \n"
 						+ "?s rdf:type <http://www.w3.org/2002/07/owl#Class> . \n" + "?s rdfs:label ?lbl . \n"
-						+ "?lbl bif:contains " + "\"" + term + "\" . \n" + "FILTER (lang(?lbl) = 'en') . \n" + "}\n"
-						+ "} limit 3";
+//						+ "?lbl bif:contains " + "\"'" + term + "'\" . \n" 
+						+ "FILTER (CONTAINS(?lbl, \""+ term + "\")) .\n"
+						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n"
+						+ "} ORDER BY strlen(str(?s)) limit 10";
 				queryPart3 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n"
 						+ "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n" + "PREFIX bif:<bif:> \n"
-						+ "select ?s ?t ?lbl where {\n" + "{ \n" + "?s rdf:type ?t . \n"
-						+ "?s rdf:type rdf:Property . \n" + "?s rdfs:label ?lbl . \n" + "?lbl bif:contains " + "\""
-						+ term + "\" . \n" + "FILTER (lang(?lbl) = 'en') . \n" + "}\n" + "} limit 3";
+						+ "select ?s ?t ?lbl "
+						+ "where {\n" + "{ \n" + "?s rdf:type ?t . \n"
+						+ "?s rdf:type rdf:Property . \n" + "?s rdfs:label ?lbl . \n" 
+						+ "FILTER (CONTAINS(?lbl, \""+ term + "\")) .\n"
+//						+ "?lbl bif:contains " + "\"'" + term + "'\" . \n" 
+						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n" + "} ORDER BY strlen(str(?s)) limit 10";
 
-				  
 				QueryExecution queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
 						queryPart1, GlobalConstants.DBPEDIA_GRAPH_IRI);
 				ResultSet res = queryRes.execSelect();
@@ -163,14 +184,22 @@ public class TermMapper {
 		}
 		finally {
 		}
-
-		
-		// instead of checking type, just check if contains ontology,resource or
-		// property
+	
 		return queryMappings;
 	}
 
-
+	public static String[] naiveTermSplitter(String s) {
+		String naiveTermSplit[]=new String[2];
+		int splitLen = s.length()/3;
+		if(splitLen>0) {
+			naiveTermSplit[0] = s.substring(0, splitLen);
+			naiveTermSplit[1] = s.substring(s.length()-splitLen, s.length());
+			return naiveTermSplit;
+		}
+		else {
+			return null;
+		}
+	}
 	/**
 	 * Extra condition to add to SparQL in the end if this information is available.
 	 * 

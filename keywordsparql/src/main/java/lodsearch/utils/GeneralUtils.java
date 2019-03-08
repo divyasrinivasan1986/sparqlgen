@@ -25,7 +25,7 @@ public class GeneralUtils {
 		// Iterate over all the elements
 		while (keywords.hasNext()) {
 			Entry<String, String[]> entry = keywords.next();
-			if(!stopWordFiltered.matches(".*\\b" + Pattern.quote(entry.getKey()) + "\\b.*"))
+			if(!stopWordFiltered.toLowerCase().matches(".*\\b" + Pattern.quote(entry.getKey().toLowerCase()) + "\\b.*"))
 				keywords.remove();
 		}
 		return keywordVecs;
