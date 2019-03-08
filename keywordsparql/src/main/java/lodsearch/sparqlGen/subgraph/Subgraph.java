@@ -25,21 +25,26 @@ public class Subgraph {
 			List<QueryResult> firstTermUris = termToRdfMapping.get(queryTerms.get(i));
 			List<QueryResult> secondTermUris = termToRdfMapping.get(queryTerms.get(i+1));
 			List<SelectBuilder> newSubgraphsList = new ArrayList<SelectBuilder>();
-			for(QueryResult firsttermUri : firstTermUris) {
-				for(QueryResult secondTermUri : secondTermUris) {
+			for(int j=0;j<firstTermUris.size();j++) {
+				QueryResult firsttermUri = firstTermUris.get(j);
+				for(int k=0;k<secondTermUris.size();k++) {
+					QueryResult secondTermUri = secondTermUris.get(k);
+					
+					int index = Integer.parseInt(String.valueOf(j>10?j*2+1:j) + String.valueOf(k>10?k*2+1:k));
 					if(!subgraphsList.isEmpty()) {
 						for(SelectBuilder sb:subgraphsList) {
-							SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,i,sb);
-							if(!(subgraph == sb))
+							SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,index,sb);
+							if(!(subgraph.equals(sb)))
 								newSubgraphsList.add(subgraph);
 						}
 					}
 					else {
 						SelectBuilder subgraphParam = new SelectBuilder();
 						subgraphParam.addPrefixes(GlobalConstants.prefixes);
-						SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,i,subgraphParam);
-						if(!(subgraph == subgraphParam))
-							subgraphsList.add(subgraph);
+						SelectBuilder subgraph = checkUriTypeAndFormSubgraph(firsttermUri,secondTermUri,index,subgraphParam);
+						if(!(subgraph.equals(subgraphParam)))
+							newSubgraphsList.add(subgraph);
+							//subgraphsList.add(subgraph);
 					}
 					
 				}
@@ -60,41 +65,73 @@ public class Subgraph {
 		
 	}
 	private static SelectBuilder checkUriTypeAndFormSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder subgraph) {
-		SelectBuilder sb = new SelectBuilder();
+		SelectBuilder sb = subgraph;
 		//need a mechanism to backtrack if results not found
-		if(firsttermUri.getType().contains("resource") && secondTermUri.getType().contains("resource")) {
+		if(firsttermUri.getMappingURI().toLowerCase().contains("resource") && secondTermUri.getMappingURI().toLowerCase().contains("resource")) {
 			sb = formResResSubgraph(firsttermUri,secondTermUri,index,subgraph);
 		}
-		else if(firsttermUri.getType().contains("ontology") && secondTermUri.getType().contains("ontology")) {
-			sb = formOntOntSubgraph(firsttermUri,secondTermUri,index,subgraph);
+		else if(firsttermUri.getMappingURI().toLowerCase().contains("ontology") && secondTermUri.getMappingURI().toLowerCase().contains("ontology")) {
+			if(firsttermUri.getType().toLowerCase().contains("property") && secondTermUri.getType().toLowerCase().contains("ontology")) {
+				sb = formOntPropSubgraph(secondTermUri,firsttermUri,index,subgraph);
+			}
+			else if(firsttermUri.getType().toLowerCase().contains("ontology") && secondTermUri.getType().toLowerCase().contains("property")) {
+				sb = formOntPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}
+			else if(firsttermUri.getType().toLowerCase().contains("property") && secondTermUri.getType().toLowerCase().contains("property")) {
+				sb = formPropPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}else {
+				sb = formOntOntSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}
 		}
-		else if(firsttermUri.getType().contains("property") && secondTermUri.getType().contains("property")) {
+		else if(firsttermUri.getMappingURI().toLowerCase().contains("property") && secondTermUri.getMappingURI().toLowerCase().contains("property")) {
 			sb = formPropPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
 		}
-		else if((firsttermUri.getType().contains("resource") && secondTermUri.getType().contains("ontology")) ) {
-			sb = formResOntSubgraph(firsttermUri,secondTermUri,index,subgraph);
+		else if((firsttermUri.getMappingURI().toLowerCase().contains("resource") && secondTermUri.getMappingURI().toLowerCase().contains("ontology")) ) {
+			if(secondTermUri.getType().toLowerCase().contains("property")) {
+				sb = formResPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}
+			else {
+				sb = formResOntSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}
+			
 		}
-		else if((firsttermUri.getType().contains("ontology") && secondTermUri.getType().contains("resource"))) {
-			sb = formResOntSubgraph(secondTermUri,firsttermUri,index,subgraph);
+		else if((firsttermUri.getMappingURI().toLowerCase().contains("ontology") && secondTermUri.getMappingURI().toLowerCase().contains("resource"))) {
+			if(firsttermUri.getType().toLowerCase().contains("property")) {
+				sb = formResPropSubgraph(secondTermUri,firsttermUri,index,subgraph);
+			}
+			else {
+				sb = formResOntSubgraph(secondTermUri,firsttermUri,index,subgraph);
+			}
+			
 		}
-		else if((firsttermUri.getType().contains("resource") && secondTermUri.getType().contains("property"))) {
+		else if((firsttermUri.getMappingURI().toLowerCase().contains("resource") && secondTermUri.getMappingURI().toLowerCase().contains("property"))) {
 			sb = formResPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
 		}
-		else if((firsttermUri.getType().contains("property") && secondTermUri.getType().contains("resource"))) {
+		else if((firsttermUri.getMappingURI().toLowerCase().contains("property") && secondTermUri.getMappingURI().toLowerCase().contains("resource"))) {
 			sb = formResPropSubgraph(secondTermUri,firsttermUri,index,subgraph);
 		}
-		else if((firsttermUri.getType().contains("ontology") && secondTermUri.getType().contains("property"))) {
-			sb = formOntPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+		else if((firsttermUri.getMappingURI().toLowerCase().contains("ontology") && secondTermUri.getMappingURI().toLowerCase().contains("property"))) {
+			if(firsttermUri.getType().toLowerCase().contains("property")) {
+				sb = formPropPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}
+			else {
+				sb = formOntPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}			
 		}
-		else if((firsttermUri.getType().contains("property") && secondTermUri.getType().contains("ontology"))) {
-			sb = formOntPropSubgraph(secondTermUri,firsttermUri,index,subgraph);
+		else if((firsttermUri.getMappingURI().toLowerCase().contains("property") && secondTermUri.getMappingURI().toLowerCase().contains("ontology"))) {
+			if(secondTermUri.getType().toLowerCase().contains("property")) {
+				sb = formPropPropSubgraph(firsttermUri,secondTermUri,index,subgraph);
+			}
+			else {
+				sb = formOntPropSubgraph(secondTermUri,firsttermUri,index,subgraph);
+			}	
 		}
 		
 		return sb;
 	}
 	private static SelectBuilder formOntPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder subgraph) {
-		SelectBuilder sb1 = subgraph;
-		SelectBuilder sb2 = subgraph;
+		SelectBuilder sb1 = subgraph.clone();
+		SelectBuilder sb2 = subgraph.clone();
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
 			sb1.addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
@@ -120,9 +157,9 @@ public class Subgraph {
 		ResultSet res2 = queryRes.execSelect();
 		
 	
-		int count2 = res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt();
+		int count2 = res2.hasNext()?res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt():0;
 		//compare res1 res2 results. keep higher one
-		int count1 = res1.nextSolution().get("c"+index).asLiteral().getInt();
+		int count1 = res1.hasNext()?res1.nextSolution().get("c"+index).asLiteral().getInt():0;
 		if(count1 > count2) {
 			finalBuilder = sb1;
 		}
@@ -133,7 +170,7 @@ public class Subgraph {
 			return subgraph;
 		}
 		else {
-			finalBuilder.addVar("?res"+index)/*.addVar("?res"+(index + "a"))*/;
+			finalBuilder.addVar("?res"+index).addGroupBy("?res"+index);/*.addVar("?res"+(index + "a"))*/;
 			/*finalBuilder.addVar("?lbl"+index).addVar("?lbl"+(index + "a"));
 			finalBuilder.addWhere("?res"+index,"rdfs:label","?lbl"+index);
 			finalBuilder.addWhere("?res"+(index + "a"),"rdfs:label","?lbl"+(index + "a"));*/
@@ -143,12 +180,12 @@ public class Subgraph {
 
 	}
 	private static SelectBuilder formResPropSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder subgraph) {
-		SelectBuilder sb1 = subgraph;
-		SelectBuilder sb2 = subgraph;
+		SelectBuilder sb1 = subgraph.clone();
+		SelectBuilder sb2 = subgraph.clone();
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
-			sb1.addVar("count(*)", "?p"+index).addVar("?res"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "<"+secondTermUri.getMappingURI()+">","?res"+index );
-			sb2.addVar("count(*)", "?p"+(index + "a")).addVar("?res"+index).addWhere("?res"+index, "<"+secondTermUri.getMappingURI()+">","<"+firsttermUri.getMappingURI()+">");
+			sb1.addVar("count(*)", "?p"+index).addVar("?res"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "<"+secondTermUri.getMappingURI()+">","?res"+index ).addGroupBy("?res"+index);
+			sb2.addVar("count(*)", "?p"+(index + "a")).addVar("?res"+index).addWhere("?res"+index, "<"+secondTermUri.getMappingURI()+">","<"+firsttermUri.getMappingURI()+">").addGroupBy("?res"+index);
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -164,8 +201,8 @@ public class Subgraph {
 		ResultSet res2 = queryRes.execSelect();
 		
 		//compare res1 res2 results. keep higher one
-		int count1 = res1.nextSolution().get("p"+index).asLiteral().getInt();
-		int count2 = res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt();
+		int count1 = res1.hasNext()?res1.nextSolution().get("p"+index).asLiteral().getInt():0;
+		int count2 = res2.hasNext()?res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt():0;
 		if(count1 > count2) {
 			finalBuilder = sb1;
 		}
@@ -185,9 +222,9 @@ public class Subgraph {
 		
 	}
 	private static SelectBuilder formResOntSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder subgraph) {
-		SelectBuilder sb1 = subgraph;
-		SelectBuilder sb2 = subgraph;
-		SelectBuilder sb3 = subgraph;
+		SelectBuilder sb1 = subgraph.clone();
+		SelectBuilder sb2 = subgraph.clone();
+		SelectBuilder sb3 = subgraph.clone();
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
 			sb1.addWhere("<"+firsttermUri.getMappingURI()+">", "rdf:type", "<"+secondTermUri.getMappingURI()+">");			
@@ -195,11 +232,11 @@ public class Subgraph {
 			
 			sb2.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+secondTermUri.getMappingURI()+">");
 			sb2.addWhere("?res"+index, "?p", "<"+firsttermUri.getMappingURI()+">");
-			sb2.addVar("count(*)", "?c"+(index + "a"));
+			sb2.addVar("count(*)", "?c"+(index + "a")).addGroupBy("?res"+index);
 			
 			sb3.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+secondTermUri.getMappingURI()+">");
 			sb3.addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "?res"+index);
-			sb3.addVar("count(*)", "?c"+(index + "a")+"a");
+			sb3.addVar("count(*)", "?c"+(index + "a")+"a").addGroupBy("?res"+index);
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -211,7 +248,7 @@ public class Subgraph {
 		ResultSet res1 = queryRes.execSelect();
 		
 		//compare res1 res2 results. keep higher one
-		int count1 = res1.nextSolution().get("c"+index).asLiteral().getInt();
+		int count1 = res1.hasNext()?res1.nextSolution().get("c"+index).asLiteral().getInt():0;
 		int count2=0;int count3=0;
 		if(count1 > 0) {
 			finalBuilder = sb1;
@@ -224,8 +261,8 @@ public class Subgraph {
 			queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
 					sb3.buildString(), GlobalConstants.DBPEDIA_GRAPH_IRI);
 			ResultSet res3 = queryRes.execSelect();
-			count2 = res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt();
-			count3 = res3.nextSolution().get("c"+(index + "a")+"a").asLiteral().getInt();
+			count2 = res2.hasNext()?res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt():0;
+			count3 = res3.hasNext()?res3.nextSolution().get("c"+(index + "a")+"a").asLiteral().getInt():0;
 			if(count1==0 && count2==0 && count3==0) {
 				return subgraph;
 			}
@@ -250,17 +287,19 @@ public class Subgraph {
 		return subgraph;
 	}
 	private static SelectBuilder formOntOntSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder subgraph) {
-		SelectBuilder sb1 = subgraph;
-		SelectBuilder sb2 = subgraph;
+		SelectBuilder sb1 = subgraph.clone();
+		SelectBuilder sb2 = subgraph.clone();
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
-			sb1.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
+			sb1.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">").addGroupBy("?res"+index);
 			sb1./*addVar("?res"+(index + "a")).*/addWhere("?res"+(index + "a"), "rdf:type", "<"+secondTermUri.getMappingURI()+">");
-			sb1.addVar("count(*)", "?p"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "<"+secondTermUri.getMappingURI()+">");
-
-			sb2.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">");
+			sb1.addVar("count(*)", "?p"+index).addWhere("?res"+index, "?p", "?res"+(index + "a"));
+			/*addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "<"+secondTermUri.getMappingURI()+">")
+			 * addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">"
+			 */
+			sb2.addVar("?res"+index).addWhere("?res"+index, "rdf:type", "<"+firsttermUri.getMappingURI()+">").addGroupBy("?res"+index);
 			sb2/*.addVar("?res"+(index + "a"))*/.addWhere("?res"+(index + "a"), "rdf:type", "<"+secondTermUri.getMappingURI()+">");
-			sb2.addVar("count(*)", "?p"+(index + "a")).addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">");
+			sb2.addVar("count(*)", "?p"+(index + "a")).addWhere("?res"+(index + "a"), "?p", "?res"+index);
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -276,8 +315,8 @@ public class Subgraph {
 		ResultSet res2 = queryRes.execSelect();
 		
 		//compare res1 res2 results. keep higher one
-		int count1 = res1.nextSolution().get("p"+index).asLiteral().getInt();
-		int count2 = res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt();
+		int count1 = res1.hasNext()?res1.nextSolution().get("p"+index).asLiteral().getInt():0;
+		int count2 = res2.hasNext()?res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt():0;
 		if(count1 > count2) {
 			
 			finalBuilder = sb1;
@@ -298,12 +337,12 @@ public class Subgraph {
 	
 	}
 	private static SelectBuilder formResResSubgraph(QueryResult firsttermUri, QueryResult secondTermUri,int index, SelectBuilder subgraph) {
-		SelectBuilder sb1 = subgraph;
-		SelectBuilder sb2 = subgraph;
+		SelectBuilder sb1 = subgraph.clone();
+		SelectBuilder sb2 = subgraph.clone();
 		SelectBuilder finalBuilder = new SelectBuilder();
 		try {
-			sb1.addVar("?p"+index).addVar("count(*)", "?p"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "?p", "<"+secondTermUri.getMappingURI()+">");
-			sb2.addVar("?p"+(index + "a")).addVar("count(*)", "?p"+(index + "a")).addWhere("<"+secondTermUri.getMappingURI()+">", "?p", "<"+firsttermUri.getMappingURI()+">");
+			sb1.addVar("?p"+index).addGroupBy("?p"+index).addVar("count(*)", "?c"+index).addWhere("<"+firsttermUri.getMappingURI()+">", "?p"+index, "<"+secondTermUri.getMappingURI()+">");
+			sb2.addVar("?p"+(index + "a")).addGroupBy("?p"+(index+"a")).addVar("count(*)", "?c"+(index + "a")).addWhere("<"+secondTermUri.getMappingURI()+">", "?p"+(index + "a"), "<"+firsttermUri.getMappingURI()+">");
 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
@@ -319,8 +358,8 @@ public class Subgraph {
 		ResultSet res2 = queryRes.execSelect();
 		
 		//compare res1 res2 results. keep higher one
-		int count1 = res1.nextSolution().get("p"+index).asLiteral().getInt();
-		int count2 = res2.nextSolution().get("p"+(index + "a")).asLiteral().getInt();
+		int count1 = res1.hasNext()?res1.nextSolution().get("c"+index).asLiteral().getInt():0;
+		int count2 = res2.hasNext()?res2.nextSolution().get("c"+(index + "a")).asLiteral().getInt():0;
 		if(count1 > count2) {
 			
 			finalBuilder = sb1;

@@ -24,7 +24,12 @@ $(function() {
 		var words = newMsg.split(" ");
 		for (var i = 0; i < words.length; i++) {
 			simWords = Word2VecUtils.findSimilarWords(NUM_TO_SHOW, words[i]);
-			word2vecmap[words[i]]=simWords;
+			if(!(simWords[0]==false))
+				word2vecmap[words[i]]=simWords;
+			else if(simWords[0]==false){
+				var simword = [[words[i],1]];
+				word2vecmap[words[i]]=simword;
+			}
 			//word2vecmap.set(words[i],simWords);
 		}
 		var maptoobj=function strMapToObj(strMap) {

@@ -2,6 +2,7 @@ package lodsearch.sparqlGen.termRdfMapper;
 
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -17,9 +18,9 @@ import lodsearch.utils.GeneralUtils;
 public class TermMapper {
 
 	public static LinkedHashMap<String, String[]> queryKeywordVecsMap;
-	public static LinkedHashMap<String, List<QueryResult>> termToRdfMapping = new LinkedHashMap<String, List<QueryResult>>();
+	public LinkedHashMap<String, List<QueryResult>> termToRdfMapping = new LinkedHashMap<String, List<QueryResult>>();
 	
-	public static LinkedHashMap<String, List<QueryResult>> obtainRdfMappings(String query,LinkedHashMap<String, String[]> keywordVecs) {
+	public LinkedHashMap<String, List<QueryResult>> obtainRdfMappings(String query,LinkedHashMap<String, String[]> keywordVecs) {
 		List<String> namedKeysList = new ArrayList<String>();
 		LinkedHashMap<String, List<QueryResult>> tempMap = new LinkedHashMap<String, List<QueryResult>>();
 		
@@ -37,7 +38,7 @@ public class TermMapper {
 					termCountInUri++;
 				}
 			}
-			if(termCountInUri > 1) {
+			if(termCountInUri > 0) {
 				QueryResult qRes = new QueryResult();
 				qRes.setType("resource");
 				qRes.setMappingURI(namedEntityUri);
@@ -67,7 +68,10 @@ public class TermMapper {
 			}else {
 				for (String word : keywordVecs.get(queryTerms.get(i - 1))) {
 					List<QueryResult> queryMappings = fetchTermMappings(word);
-					queryTermMappings.addAll(queryMappings);
+					Set<String> mappingUriSet = new HashSet<String>();
+					List<QueryResult> noDuplicateMappings = queryMappings.stream().filter(e -> mappingUriSet.add(e.getMappingURI()))
+				            .collect(Collectors.toList());
+					queryTermMappings.addAll(noDuplicateMappings);
 				}
 				
 				termToRdfMapping.put(queryTerms.get(i - 1), queryTermMappings);

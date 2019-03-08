@@ -18,7 +18,7 @@ import lodsearch.utils.GeneralUtils;
 public class SparqlRunner {
 
 	public static LinkedHashMap<String, String[]> queryKeywordVecsMap;
-	public static LinkedHashMap<String, List<QueryResult>> termToRdfMapping = new LinkedHashMap<String, List<QueryResult>>();
+	public LinkedHashMap<String, List<QueryResult>> termToRdfMapping = new LinkedHashMap<String, List<QueryResult>>();
 	public String query;
 	
 	public void search(String query, LinkedHashMap<String, String[]> keywordVecs) {
@@ -26,7 +26,8 @@ public class SparqlRunner {
 		// stop words removal
 		String noStopWordsQuery = GeneralUtils.removeStopWords(query);
 		queryKeywordVecsMap = GeneralUtils.removeStopWordEntriesFromMap(noStopWordsQuery, keywordVecs);
-		termToRdfMapping = TermMapper.obtainRdfMappings(query,queryKeywordVecsMap);
+		TermMapper t = new TermMapper();
+		termToRdfMapping = t.obtainRdfMappings(query,queryKeywordVecsMap);
 		Subgraph.formSubgraphs(termToRdfMapping);
 	}
 
