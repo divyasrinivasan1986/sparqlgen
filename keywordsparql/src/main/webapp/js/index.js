@@ -15,15 +15,14 @@ $(function() {
 			event.preventDefault();
 		}
 	});
-	$("#send").click(function() {
+	$("#send").click(function() {		
 		var simWords;
 		var word2vecmap = {};
-		var newMsg = $("#textbox").val();
-
+		var newMsg = $("#textbox").val().replace(/,/g, '');
 		$("#textbox").val("");
 		var words = newMsg.split(" ");
 		for (var i = 0; i < words.length; i++) {
-			simWords = Word2VecUtils.findSimilarWords(NUM_TO_SHOW, words[i]);
+			simWords = Word2VecUtils.findSimilarWords(NUM_TO_SHOW, words[i].trim());
 			if(!(simWords[0]==false))
 				word2vecmap[words[i]]=simWords;
 			else if(simWords[0]==false){
@@ -75,9 +74,10 @@ $(function() {
 				}
 				var obj = JSON.parse(data);
 				console.log(obj);
-				for(var i=0; i<obj.length; i++){
 				var displayText="<div class='card'>";
-				var elementName="Open Link in DBpedia";
+				for(var i=0; i<obj.answers.length; i++){
+				
+				/*var elementName="Open Link in DBpedia";
 				if (typeof obj[i].thumbnail == "undefined")
 					console.log("Thumbnail is not present");
 				else
@@ -92,9 +92,13 @@ $(function() {
 					var link=obj[i].URI;
 					console.log(link);
 					displayText +=elementName.link(link) + "-->For reference,URL=" + link;
+				}*/
+				var link=obj.answers[i];
+				console.log(link);
+				displayText +=/*elementName.link(link) + "-->For reference,URL=" +*/ link+"<br>";
+				
 				}
 				displayText +="</div>"
-				}
 				$("#container").html(displayText);
 				$("#container").scrollTop($("#container").prop("scrollHeight"));
 			},

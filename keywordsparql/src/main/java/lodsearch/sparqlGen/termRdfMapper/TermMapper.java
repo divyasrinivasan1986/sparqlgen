@@ -69,15 +69,20 @@ public class TermMapper {
 				for (String word : keywordVecs.get(queryTerms.get(i - 1))) {
 					if(word != null) {
 						List<QueryResult> queryMappings = fetchTermMappings(word);
-						Set<String> mappingUriSet = new HashSet<String>();
+						/*Set<String> mappingUriSet = new HashSet<String>();
 						List<QueryResult> noDuplicateMappings = queryMappings.stream().filter(e -> mappingUriSet.add(e.getMappingURI()))
-					            .collect(Collectors.toList());
-						queryTermMappings.addAll(noDuplicateMappings);
+					            .collect(Collectors.toList());*/
+						
+						//select top 5 from no dupli and add to querytermmappings						
+//						queryTermMappings.addAll(selectTopFiveOccurrences(noDuplicateMappings));
+						queryTermMappings.addAll(queryMappings);
 					}
 					
 				}
-				
-				termToRdfMapping.put(queryTerms.get(i - 1), queryTermMappings);
+				Set<String> mappingUriSet = new HashSet<String>();
+				List<QueryResult> noDuplicateMappings = queryTermMappings.stream().filter(e -> mappingUriSet.add(e.getMappingURI()))
+			            .collect(Collectors.toList());
+				termToRdfMapping.put(queryTerms.get(i - 1), selectTopOccurrences(noDuplicateMappings));
 				queryTermMappings = new ArrayList<QueryResult>();
 			}
 		
@@ -113,7 +118,7 @@ public class TermMapper {
 						+ "?s rdf:type rdf:Property . \n"
 						+ "?s rdf:type <http://www.w3.org/2002/07/owl#Class> }" 
 						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n"
-						+ "} ORDER BY strlen(str(?s)) limit 10";
+						+ "}  ORDER BY strlen(str(?s)) limit 50 ";
 				queryPart2 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n"
 						+ "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n" + "PREFIX bif:<bif:> \n"
 						+ "select ?s ?t ?lbl "
@@ -122,7 +127,7 @@ public class TermMapper {
 //						+ "?lbl bif:contains " + "\"'" + term + "'\" . \n" 
 						+ "FILTER (CONTAINS(?lbl, \""+ term + "\")) .\n"
 						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n"
-						+ "} ORDER BY strlen(str(?s)) limit 10";
+						+ "} ORDER BY strlen(str(?s)) limit 50";
 				queryPart3 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n"
 						+ "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n" + "PREFIX bif:<bif:> \n"
 						+ "select ?s ?t ?lbl "
@@ -130,8 +135,8 @@ public class TermMapper {
 						+ "?s rdf:type rdf:Property . \n" + "?s rdfs:label ?lbl . \n" 
 						+ "FILTER (CONTAINS(?lbl, \""+ term + "\")) .\n"
 //						+ "?lbl bif:contains " + "\"'" + term + "'\" . \n" 
-						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n" + "} ORDER BY strlen(str(?s)) limit 10";
-
+						+ "FILTER (lang(?lbl) = 'en') . \n" + "}\n" + "} ORDER BY strlen(str(?s)) limit 50";
+				
 				QueryExecution queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
 						queryPart1, GlobalConstants.DBPEDIA_GRAPH_IRI);
 				ResultSet res = queryRes.execSelect();
@@ -216,7 +221,43 @@ public class TermMapper {
 			output = "?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://xmlns.com/foaf/0.1/Person";
 		return output;
 	}
+	List<QueryResult> selectTopOccurrences(List<QueryResult> mappings){
+		int count;
+		List<QueryResult> sortedMappings = new ArrayList<QueryResult>();
+		Map<QueryResult,Integer> countMap = new LinkedHashMap<QueryResult,Integer>();
+		for(QueryResult mapping : mappings) {
+			count = 0;
+			String countSubjectQuery = "select (count(*) as ?reccount) where {<"+mapping.getMappingURI()+"> ?b ?d }";
+			String countPredicateQuery = "select (count(*) as ?reccount) where {?b <"+ mapping.getMappingURI() +"> ?d }";
+			String countObjectQuery = "select (count(*) as ?reccount) where {?b ?d <"+ mapping.getMappingURI() +"> }";
 
+			QueryExecution queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
+					countSubjectQuery, GlobalConstants.DBPEDIA_GRAPH_IRI);
+			ResultSet res = queryRes.execSelect();
+			count = count + (res.hasNext()?res.nextSolution().get("reccount").asLiteral().getInt():0);
+			queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
+					countPredicateQuery, GlobalConstants.DBPEDIA_GRAPH_IRI);
+			res = queryRes.execSelect();
+			count = count + (res.hasNext()?res.nextSolution().get("reccount").asLiteral().getInt():0);
+			queryRes = QueryExecutionFactory.sparqlService(GlobalConstants.SPARQL_ENDPOINT,
+					countObjectQuery, GlobalConstants.DBPEDIA_GRAPH_IRI);
+			res = queryRes.execSelect();
+			count = count + (res.hasNext()?res.nextSolution().get("reccount").asLiteral().getInt():0);
+			
+			countMap.put(mapping, count);
+		}
+		Map<QueryResult,Integer> sortedCountMap = countMap.entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,LinkedHashMap::new));
+		//iterate through sorted map 5 times and take top five and add to sortedMappings
+		Iterator<Map.Entry<QueryResult,Integer>> sortedMapIterator = sortedCountMap.entrySet().iterator();
+        while (sortedMapIterator.hasNext()) {
+            Map.Entry<QueryResult,Integer> entry = sortedMapIterator.next();
+            sortedMappings.add(entry.getKey());
+            if(sortedMappings.size()==20)
+            	break;
+        }
+		return sortedMappings;
+	}
 	public static void main(String[] args) {
 		System.out.println("TermMapper.main()");
 	}

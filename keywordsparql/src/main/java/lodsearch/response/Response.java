@@ -4,7 +4,9 @@
 package lodsearch.response;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Base Response class. 
@@ -12,6 +14,9 @@ import java.util.List;
  * Due to What can you do returning various options for each card, an array list internally of URL's have to be maintained.
  */
 public class Response {
+	Set<String> answers = new HashSet<String>();
+	private Set<EntryInformation> entryList = new HashSet<EntryInformation>();
+	/*
 	 private List<EntryInformation> entryList = new ArrayList<EntryInformation>();
 	 private String title;
 	 private String content;
@@ -49,4 +54,20 @@ public class Response {
         image = imageName;
      }
 
-}
+*/
+
+	public Set<EntryInformation> getEntryList() {
+		return entryList;
+	}
+
+	public void setEntryList(Set<EntryInformation> entryList) {
+		this.entryList = entryList;
+	}
+
+	public Set<String> getAnswers() {
+		return answers;
+	}
+
+	public void setAnswers(Set<String> answers) {
+		this.answers = answers;
+	}}

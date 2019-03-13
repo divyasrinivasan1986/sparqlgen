@@ -24,11 +24,9 @@ public class SparqlRestController {
     	String query = request.getRequestContent().get(0)==null?"":request.getRequestContent().get(0).getText();
     	LinkedHashMap<String,Object[][]> wordMap = request.getRequestContent().get(0)==null?null:request.getRequestContent().get(0).getWordMap();
     	LinkedHashMap<String,String[]> cleanedWordMap = GeneralUtils.cleanUIInputMap(wordMap);
-    	Response response = null;
     	SparqlRunner rdfhdt = new SparqlRunner();
 //    	SparqlRunner rdfhdt = new SparqlRunner(new HDTSparql("/home/divya/lod/dbpedia2016-04en.hdt"));
-    	rdfhdt.search(query,cleanedWordMap);
+    	Response response = rdfhdt.search(query,cleanedWordMap);
     	return response;
-        
     }
 }

@@ -6,19 +6,16 @@ package lodsearch.response;
 
 public class EntryInformation {
 	public enum Type {
-		TEXT, URL,OTHERS
+		TEXT, URL
 	};
 	private String displayText;
-    private Type buttonType; //Maybe not required in current context, Will consider removing.
     private String uri;
     public EntryInformation() {
     		displayText="";
     		uri="";
-    		buttonType=Type.TEXT;
     }
-    public EntryInformation(String title, Type type, String url) {
+    public EntryInformation(String title, String url) {
     		displayText = title;
-        buttonType = type;
         uri = url;
     }
     public String getDisplayText() {
@@ -27,14 +24,6 @@ public class EntryInformation {
 
     public void setDisplayText(String title) {
     		displayText = title;
-    }
-
-    public Type getButtonType() {
-        return buttonType;
-    }
-
-    public void setButtonType(Type type) {
-        buttonType = type;
     }
 
     public String getUri() {

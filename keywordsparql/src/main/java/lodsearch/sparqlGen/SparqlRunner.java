@@ -9,6 +9,7 @@ import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.RDFNode;
 
+import lodsearch.response.Response;
 import lodsearch.sparqlGen.queryRes.QueryResult;
 import lodsearch.sparqlGen.subgraph.Subgraph;
 import lodsearch.sparqlGen.termRdfMapper.TermMapper;
@@ -21,14 +22,15 @@ public class SparqlRunner {
 	public LinkedHashMap<String, List<QueryResult>> termToRdfMapping = new LinkedHashMap<String, List<QueryResult>>();
 	public String query;
 	
-	public void search(String query, LinkedHashMap<String, String[]> keywordVecs) {
+	public Response search(String query, LinkedHashMap<String, String[]> keywordVecs) {
 		this.query = query;
 		// stop words removal
 		String noStopWordsQuery = GeneralUtils.removeStopWords(query);
 		queryKeywordVecsMap = GeneralUtils.removeStopWordEntriesFromMap(noStopWordsQuery, keywordVecs);
 		TermMapper t = new TermMapper();
 		termToRdfMapping = t.obtainRdfMappings(query,queryKeywordVecsMap);
-		Subgraph.formSubgraphs(termToRdfMapping);
+		Response response = Subgraph.formSubgraphs(termToRdfMapping);
+		return response;
 	}
 
 	public static void main(String[] args) {
